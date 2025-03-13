@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Bot {{ bot.id }} - Detalles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Los mismos estilos que en trading_bots.html -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            "50": "#f0faff",
+                            "100": "#e0f2fe",
+                            "200": "#bae6fd",
+                            "300": "#7dd3fc",
+                            "400": "#38bdf8",
+                            "500": "#0ea5e9",
+                            "600": "#0284c7",
+                            "700": "#0369a1",
+                            "800": "#075985",
+                            "900": "#0c4a6e",
+                            "950": "#082f49"
+                        },
+                        blueEye: {
+                            "50": "#f0f9ff",
+                            "100": "#e0f7ff",
+                            "200": "#c0e8ff",
+                            "300": "#99d5ff",
+                            "400": "#5aafff",
+                            "500": "#3b82f6",
+                            "600": "#1d4ed8",
+                            "700": "#1e40af",
+                            "800": "#1e3a8a",
+                            "900": "#172554"
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'ui-sans-serif', 'system-ui']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Los mismos estilos que en trading_bots.html */
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #7038ff, #00a3ff, #3b82f6, #5f8fff);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        /* Temas */
+        .theme-dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-blue-eye {
+            --bg-primary: #15263a;
+            --bg-secondary: #1a365d;
+            --text-primary: #e0f2fe;
+            --text-secondary: #bae6fd;
+            --accent-color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-100 font-sans transition-colors duration-300" id="app-body">
+    <!-- Barra de navegación -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('index') }}" class="text-2xl font-bold bg-clip-text text-transparent gradient-bg">BOTXI</a>
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded-full animate-pulse-slow">Beta</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Selector de idioma y tema (igual que en trading_bots.html) -->
+                    <a href="{{ url_for('index') }}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <span class="i18n" data-key="backToHome">Volver al Inicio</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-4 max-w-6xl">
+        <div class="mb-8 flex items-center">
+            <div class="w-4 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-md mr-3"></div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent gradient-bg">
+                <span class="i18n" data-key="botDetails">Detalles del Bot</span>: {{ bot.id }}
+            </h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="mb-6">
+              {% for category, message in messages %}
+                <li class="p-4 mb-4 text-sm rounded-xl
+                           {% if category == 'error' %}
+                              bg-red-900/30 text-red-200 border border-red-700
+                           {% else %}
+                              bg-green-900/30 text-green-200 border border-green-700
+                           {% endif %}
+                           animate-fade-in">
+                  {{ message }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Botones de acción para el bot -->
+        <div class="flex flex-wrap gap-4 mb-8">
+            {% if bot.is_running %}
+            <form action="{{ url_for('stop_bot', bot_id=bot.id) }}" method="post">
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="stopBot">Detener Bot</span>
+                </button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('start_bot', bot_id=bot.id) }}" method="post">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="startBot">Iniciar Bot</span>
+                </button>
+            </form>
+            {% endif %}
+
+            {% if bot.has_position %}
+            <form action="{{ url_for('close_position', bot_id=bot.id) }}" method="post">
+                <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="closePosition">Cerrar Posición</span>
+                </button>
+            </form>
+            {% endif %}
+
+            <a href="{{ url_for('export_history', bot_id=bot.id) }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="exportHistory">Exportar Historial</span>
+            </a>
+
+            <form action="{{ url_for('remove_bot', bot_id=bot.id) }}" method="post" onsubmit="return confirm('¿Estás seguro de eliminar este bot?');">
+                <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="deleteBot">Eliminar Bot</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Panel de información del bot -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Detalles básicos -->
+            <div class="bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-slate-700 p-5">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="basicInfo">Información Básica</span>
+                </h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="exchange">Exchange:</p>
+                        <p class="text-lg font-medium">{{ bot.exchange }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="symbol">Símbolo:</p>
+                        <p class="text-lg font-medium">{{ bot.symbol }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="strategy">Estrategia:</p>
+                        <p class="text-lg font-medium">{{ bot.strategy }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="marketType">Tipo de Mercado:</p>
+                        <p class="text-lg font-medium">{{ bot.market_type }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="status">Estado:</p>
+                        <p class="text-lg font-medium flex items-center">
+                            <span class="h-2.5 w-2.5 mr-2 rounded-full
+                                {% if bot.is_running %}bg-green-500{% else %}bg-yellow-500{% endif %}"></span>
+                            {{ bot.status }}
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="profitLoss">Beneficio/Pérdida:</p>
+                        <p class="text-lg font-medium
+                            {% if bot.profit_loss.startswith('-') %}text-red-400{% else %}text-green-400{% endif %}">
+                            {{ bot.profit_loss }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-700">
+                    <p class="text-gray-400 text-xs mb-1 i18n" data-key="lastUpdate">Última Actualización:</p>
+                    <p class="text-sm">{{ bot.last_update }}</p>
+                </div>
+            </div>
+
+            <!-- Posición actual -->
+            <div class="bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-slate-700 p-5">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="currentPosition">Posición Actual</span>
+                </h2>
+
+{% if bot.has_position %}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="side">Lado:</p>
+                        <p class="text-lg font-medium {% if bot.position.side == 'long' %}text-green-400{% else %}text-red-400{% endif %}">
+                            {{ bot.position.side | capitalize }}
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="amount">Cantidad:</p>
+                        <p class="text-lg font-medium">{{ bot.position.amount }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="entryPrice">Precio de Entrada:</p>
+                        <p class="text-lg font-medium">{{ bot.position.entry_price }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="currentPrice">Precio Actual:</p>
+                        <p class="text-lg font-medium">{{ bot.position.current_price }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="stopLoss">Stop Loss:</p>
+                        <p class="text-lg font-medium">{{ bot.position.stop_loss }}</p>
+                    </div>
+
+                    <div class="bg-slate-700/40 rounded-lg p-3">
+                        <p class="text-gray-400 text-xs mb-1 i18n" data-key="takeProfit">Take Profit:</p>
+                        <p class="text-lg font-medium">{{ bot.position.take_profit }}</p>
+                    </div>
+                </div>
+
+                <!-- Cálculo de PnL en tiempo real -->
+                <div class="mt-4 pt-4 border-t border-slate-700">
+                    <p class="text-gray-400 text-xs mb-1 i18n" data-key="unrealizedPnL">P&L No Realizado:</p>
+                    <p id="pnl-value" class="text-xl font-bold">
+                        Calculando...
+                    </p>
+                </div>
+                {% else %}
+                <div class="flex flex-col items-center justify-center py-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-gray-400 text-center i18n" data-key="noOpenPosition">No hay posición abierta actualmente</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Historial de operaciones -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v10H5V5z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="tradeHistory">Historial de Operaciones</span>
+            </h2>
+
+            <div class="overflow-x-auto bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg border border-slate-700">
+                <table class="min-w-full divide-y divide-slate-700">
+                    <thead class="bg-slate-700/50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="date">Fecha</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="type">Tipo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="entryPrice">Precio Entrada</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="exitPrice">Precio Salida</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="amount">Cantidad</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="pnl">P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50 bg-slate-800/20">
+                        {% if history %}
+                            {% for trade in history %}
+                            <tr class="hover:bg-slate-700/30 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ trade.fecha }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm
+                                    {% if 'Apertura' in trade.tipo %}
+                                        {% if 'long' in trade.tipo %}text-green-400{% else %}text-red-400{% endif %}
+                                    {% else %}
+                                        text-blue-400
+                                    {% endif %}">
+                                    {{ trade.tipo }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    {{ trade.precio_entrada if trade.precio_entrada != '-' else '-' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    {{ trade.precio_salida if trade.precio_salida != '-' else '-' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">{{ trade.cantidad }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm
+                                    {% if trade.pnl != '-' %}
+                                        {% if '-' in trade.pnl %}text-red-400{% else %}text-green-400{% endif %}
+                                    {% endif %}">
+                                    {{ trade.pnl }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-10 text-center text-gray-400 i18n" data-key="noTradeHistory">No hay historial de operaciones disponible</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts para actualización en tiempo real -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Traducciones (mismo sistema que en trading_bots.html)
+        const translations = {
+            es: {
+                backToHome: "Volver al Inicio",
+                botDetails: "Detalles del Bot",
+                stopBot: "Detener Bot",
+                startBot: "Iniciar Bot",
+                closePosition: "Cerrar Posición",
+                exportHistory: "Exportar Historial",
+                deleteBot: "Eliminar Bot",
+                basicInfo: "Información Básica",
+                exchange: "Exchange",
+                symbol: "Símbolo",
+                strategy: "Estrategia",
+                marketType: "Tipo de Mercado",
+                status: "Estado",
+                profitLoss: "Beneficio/Pérdida",
+                lastUpdate: "Última Actualización",
+                currentPosition: "Posición Actual",
+                side: "Lado",
+                amount: "Cantidad",
+                entryPrice: "Precio de Entrada",
+                currentPrice: "Precio Actual",
+                stopLoss: "Stop Loss",
+                takeProfit: "Take Profit",
+                unrealizedPnL: "P&L No Realizado",
+                noOpenPosition: "No hay posición abierta actualmente",
+                tradeHistory: "Historial de Operaciones",
+                date: "Fecha",
+                type: "Tipo",
+                exitPrice: "Precio Salida",
+                pnl: "P&L",
+                noTradeHistory: "No hay historial de operaciones disponible"
+            },
+            en: {
+                backToHome: "Back to Home",
+                botDetails: "Bot Details",
+                stopBot: "Stop Bot",
+                startBot: "Start Bot",
+                closePosition: "Close Position",
+                exportHistory: "Export History",
+                deleteBot: "Delete Bot",
+                basicInfo: "Basic Information",
+                exchange: "Exchange",
+                symbol: "Symbol",
+                strategy: "Strategy",
+                marketType: "Market Type",
+                status: "Status",
+                profitLoss: "Profit/Loss",
+                lastUpdate: "Last Update",
+                currentPosition: "Current Position",
+                side: "Side",
+                amount: "Amount",
+                entryPrice: "Entry Price",
+                currentPrice: "Current Price",
+                stopLoss: "Stop Loss",
+                takeProfit: "Take Profit",
+                unrealizedPnL: "Unrealized P&L",
+                noOpenPosition: "No open position currently",
+                tradeHistory: "Trade History",
+                date: "Date",
+                type: "Type",
+                exitPrice: "Exit Price",
+                pnl: "P&L",
+                noTradeHistory: "No trade history available"
+            },
+            pt: {
+                backToHome: "Voltar ao Início",
+                botDetails: "Detalhes do Bot",
+                stopBot: "Parar Bot",
+                startBot: "Iniciar Bot",
+                closePosition: "Fechar Posição",
+                exportHistory: "Exportar Histórico",
+                deleteBot: "Excluir Bot",
+                basicInfo: "Informação Básica",
+                exchange: "Exchange",
+                symbol: "Símbolo",
+                strategy: "Estratégia",
+                marketType: "Tipo de Mercado",
+                status: "Estado",
+                profitLoss: "Lucro/Perda",
+                lastUpdate: "Última Atualização",
+                currentPosition: "Posição Atual",
+                side: "Lado",
+                amount: "Quantidade",
+                entryPrice: "Preço de Entrada",
+                currentPrice: "Preço Atual",
+                stopLoss: "Stop Loss",
+                takeProfit: "Take Profit",
+                unrealizedPnL: "P&L Não Realizado",
+                noOpenPosition: "Sem posição aberta atualmente",
+                tradeHistory: "Histórico de Operações",
+                date: "Data",
+                type: "Tipo",
+                exitPrice: "Preço de Saída",
+                pnl: "P&L",
+                noTradeHistory: "Nenhum histórico de operações disponível"
+            }
+        };
+
+        // Inicializar idioma
+        let currentLang = localStorage.getItem('botxi-language') || 'es';
+        let currentTheme = localStorage.getItem('botxi-theme') || 'dark';
+
+        // Función para aplicar idioma
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('botxi-language', lang);
+            document.documentElement.setAttribute('lang', lang);
+
+            // Actualizar todos los elementos traducibles
+            document.querySelectorAll('.i18n').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (key && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+        }
+
+        // Función para aplicar tema
+        function setTheme(theme) {
+            currentTheme = theme;
+            localStorage.setItem('botxi-theme', theme);
+            document.documentElement.className = theme;
+
+            const body = document.getElementById('app-body');
+
+            if (theme === 'dark') {
+                body.className = 'bg-slate-900 text-gray-100 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6';
+            } else if (theme === 'light') {
+                body.className = 'bg-white text-slate-900 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-slate-300 shadow-md mb-6 text-slate-900';
+            } else if (theme === 'blue-eye') {
+                body.className = 'bg-blueEye-900 text-blueEye-100 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-blueEye-900/80 border-b border-blueEye-800 shadow-md mb-6';
+            }
+        }
+
+        // Inicializar UI
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aplicar idioma y tema
+            setLanguage(currentLang);
+            setTheme(currentTheme);
+
+            // Configurar toastr
+            toastr.options = {
+                "closeButton": true,
+                "positionClass": "toast-top-right",
+                "progressBar": true,
+                "timeOut": "5000"
+            };
+
+            // Conectar con Socket.IO para actualizaciones en tiempo real
+            const socket = io();
+
+            socket.on('connect', function() {
+                console.log('Conectado a WebSocket');
+            });
+
+            socket.on('bot_updates', function(data) {
+                if (data['{{ bot.id }}']) {
+                    updateBotInfo(data['{{ bot.id }}']);
+                }
+            });
+
+            // Función para actualizar la información del bot
+            function updateBotInfo(botInfo) {
+                // Actualizar estado
+                const statusElement = document.querySelector('[data-key="status"]').nextElementSibling;
+                statusElement.innerHTML = `
+                    <span class="h-2.5 w-2.5 mr-2 rounded-full
+                        ${botInfo.is_running ? 'bg-green-500' : 'bg-yellow-500'}"></span>
+                    ${botInfo.status}
+                `;
+
+                // Actualizar P&L
+                const pnlElement = document.querySelector('[data-key="profitLoss"]').nextElementSibling;
+                pnlElement.textContent = botInfo.profit_loss;
+                pnlElement.className = `text-lg font-medium ${botInfo.profit_loss.startsWith('-') ? 'text-red-400' : 'text-green-400'}`;
+
+                // Actualizar última actualización
+                const lastUpdateElement = document.querySelector('[data-key="lastUpdate"]').nextElementSibling;
+                lastUpdateElement.textContent = botInfo.last_update;
+
+                // Actualizar información de posición si existe
+                if (botInfo.has_position && botInfo.position) {
+                    // Si hay un elemento de PnL no realizado, actualizarlo
+                    const pnlValueElement = document.getElementById('pnl-value');
+                    if (pnlValueElement) {
+                        // Calcular PnL
+                        let pnlValue = 0;
+                        if (botInfo.position.side === 'long') {
+                            pnlValue = ((botInfo.position.current_price - botInfo.position.entry_price) / botInfo.position.entry_price) * 100;
+                        } else {
+                            pnlValue = ((botInfo.position.entry_price - botInfo.position.current_price) / botInfo.position.entry_price) * 100;
+                        }
+
+                        pnlValueElement.textContent = `${pnlValue.toFixed(2)}%`;
+                        pnlValueElement.className = `text-xl font-bold ${pnlValue >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                    }
+                }
+
+                // Si el estado del bot ha cambiado, podría necesitar recargar la página
+                if ((botInfo.is_running && !{{ bot.is_running|lower }}) ||
+                    (!botInfo.is_running && {{ bot.is_running|lower }})) {
+                    toastr.info('El estado del bot ha cambiado. Recargando página...', '', {
+                        onHidden: function() {
+                            window.location.reload();
+                        }
+                    });
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 3000);
+                }
+
+                // Si la posición ha cambiado, podría necesitar recargar la página
+                if ((botInfo.has_position && !{{ bot.has_position|lower }}) ||
+                    (!botInfo.has_position && {{ bot.has_position|lower }})) {
+                    toastr.info('La posición del bot ha cambiado. Recargando página...', '', {
+                        onHidden: function() {
+                            window.location.reload();
+                        }
+                    });
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 3000);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

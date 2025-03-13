@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>BOTXI - Añadir Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            "50": "#f0faff",
+                            "100": "#e0f2fe",
+                            "200": "#bae6fd",
+                            "300": "#7dd3fc",
+                            "400": "#38bdf8",
+                            "500": "#0ea5e9",
+                            "600": "#0284c7",
+                            "700": "#0369a1",
+                            "800": "#075985",
+                            "900": "#0c4a6e",
+                            "950": "#082f49"
+                        },
+                        blueEye: {
+                            "50": "#f0f9ff",
+                            "100": "#e0f7ff",
+                            "200": "#c0e8ff",
+                            "300": "#99d5ff",
+                            "400": "#5aafff",
+                            "500": "#3b82f6",
+                            "600": "#1d4ed8",
+                            "700": "#1e40af",
+                            "800": "#1e3a8a",
+                            "900": "#172554"
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'ui-sans-serif', 'system-ui']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #7038ff, #00a3ff, #3b82f6, #5f8fff);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        /* Temas */
+        .theme-dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-blue-eye {
+            --bg-primary: #15263a;
+            --bg-secondary: #1a365d;
+            --text-primary: #e0f2fe;
+            --text-secondary: #bae6fd;
+            --accent-color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-100 font-sans transition-colors duration-300" id="app-body">
+    <!-- Barra de navegación -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
+                    <div class="text-2xl font-bold bg-clip-text text-transparent gradient-bg">BOTXI</div>
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded-full animate-pulse-slow">Beta</span>
+                </a>
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('index') }}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <span class="i18n" data-key="backToHome">Volver al Inicio</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-4 max-w-6xl">
+        <div class="mb-8 flex items-center">
+            <div class="w-4 h-8 bg-gradient-to-b from-blue-600 to-violet-600 rounded-md mr-3"></div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent gradient-bg">
+                <span class="i18n" data-key="addNewBot">Añadir Nuevo Bot</span>
+            </h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="mb-6">
+              {% for category, message in messages %}
+                <li class="p-4 mb-4 text-sm rounded-xl
+                           {% if category == 'error' %}
+                              bg-red-900/30 text-red-200 border border-red-700
+                           {% else %}
+                              bg-green-900/30 text-green-200 border border-green-700
+                           {% endif %}
+                           animate-fade-in">
+                  {{ message }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Formulario para añadir un nuevo bot -->
+        <form method="post" class="mb-8 bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-slate-700 p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Sección de configuración básica -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="i18n" data-key="basicConfig">Configuración Básica</span>
+                    </h2>
+
+                    <div>
+                        <label for="exchange" class="block text-sm font-medium text-gray-300 i18n" data-key="exchange">Exchange:</label>
+                        <select id="exchange" name="exchange" required
+                                class="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="" disabled selected class="i18n" data-key="selectExchange">Selecciona un exchange</option>
+                            {% for exchange_id in exchanges %}
+                            <option value="{{ exchange_id }}" {% if request.args.get('exchange') == exchange_id %}selected{% endif %}>{{ exchange_id | upper }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="symbol" class="block text-sm font-medium text-gray-300 i18n" data-key="tradingPair">Par de Trading:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="symbol" name="symbol" required value="BTC/USDT"
+                                   class="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <button type="button" id="load-pairs-btn" onclick="loadPairs()"
+                                    class="mt-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-md text-sm transition-colors">
+                                <span class="i18n" data-key="viewPairs">Ver Pares</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="timeframe" class="block text-sm font-medium text-gray-300 i18n" data-key="timeframe">Timeframe:</label>
+                        <select id="timeframe" name="timeframe" required
+                                class="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="1m">1m</option>
+                            <option value="5m">5m</option>
+                            <option value="15m" selected>15m</option>
+                            <option value="30m">30m</option>
+                            <option value="1h">1h</option>
+                            <option value="2h">2h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 i18n" data-key="marketType">Tipo de Mercado:</label>
+                        <div class="mt-1 flex space-x-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="market_type" value="spot" checked
+                                       class="text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-700 border-slate-600">
+                                <span class="ml-2 text-sm text-gray-300 i18n" data-key="spot">Spot</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="market_type" value="future"
+                                       class="text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-700 border-slate-600">
+                                <span class="ml-2 text-sm text-gray-300 i18n" data-key="futures">Futuros</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="investment_amount" class="block text-sm font-medium text-gray-300 i18n" data-key="investmentAmount">Monto a Invertir:</label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <input type="number" id="investment_amount" name="investment_amount" min="1" step="0.01" required value="100"
+                                   class="block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-16 sm:text-sm">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-400 sm:text-sm">USDT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de estrategia -->
+                <div class="space-y-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="i18n" data-key="strategyConfig">Configuración de Estrategia</span>
+                    </h2>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 i18n" data-key="strategyType">Tipo de Estrategia:</label>
+                        <div class="mt-1 space-y-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="strategy_type" value="predefined" checked
+                                       class="text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-700 border-slate-600"
+                                       onchange="toggleStrategyOptions()">
+                                <span class="ml-2 text-sm text-gray-300 i18n" data-key="predefinedStrategy">Estrategia Predefinida</span>
+                            </label>
+
+                            <div id="predefined-options" class="ml-6 space-y-4">
+                                {% for strategy_name, strategy in strategies.items() %}
+                                <label class="flex items-start space-x-2">
+                                    <input type="radio" name="predefined_strategy" value="{{ strategy_name }}"
+                                           {% if loop.first %}checked{% endif %}
+                                           class="text-blue-600 focus:ring-blue-500 h-4 w-4 mt-1 bg-slate-700 border-slate-600">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-200">{{ strategy_name }}</span>
+                                        <p class="text-xs text-gray-400">{{ strategy.description }}</p>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="strategy_type" value="custom"
+                                       class="text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-700 border-slate-600"
+                                       onchange="toggleStrategyOptions()"
+                                       {% if request.args.get('custom_strategy') %}checked{% endif %}>
+                                <span class="ml-2 text-sm text-gray-300 i18n" data-key="customStrategy">Estrategia Personalizada</span>
+                            </label>
+
+                            <div id="custom-options" class="ml-6 {% if not request.args.get('custom_strategy') %}hidden{% endif %}">
+                                <select id="custom_strategy" name="custom_strategy"
+                                        class="block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <option value="" disabled {% if not request.args.get('custom_strategy') %}selected{% endif %} class="i18n" data-key="selectCustomStrategy">Selecciona una estrategia personalizada</option>
+                                    {% for strategy_name, description in custom_strategies.items() %}
+                                    <option value="{{ strategy_name }}" {% if request.args.get('custom_strategy') == strategy_name %}selected{% endif %}>{{ strategy_name }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <div class="mt-2">
+                                    <a href="{{ url_for('register_custom_strategy') }}" class="text-sm text-blue-400 hover:text-blue-300 i18n" data-key="createNewCustomStrategy">Crear nueva estrategia personalizada</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="mt-8 flex items-center space-x-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="addBot">Añadir Bot</span>
+                </button>
+
+                <a href="{{ url_for('index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors">
+                    <span class="i18n" data-key="cancel">Cancelar</span>
+                </a>
+            </div>
+        </form>
+
+        <!-- Modal para seleccionar pares de trading -->
+        <div id="pairs-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
+                <div class="bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white i18n" data-key="availablePairs">Pares Disponibles</h3>
+                        <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-white">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <input type="text" id="search-pairs" placeholder="Buscar par..."
+                               class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+
+                    <div class="max-h-80 overflow-y-auto mb-4">
+                        <ul id="pairs-list" class="space-y-1">
+                            <!-- Los pares se cargarán aquí -->
+                            <li class="text-center text-gray-400 py-4 i18n" data-key="loadingPairs">Cargando pares...</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" onclick="closeModal()"
+                                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md shadow-lg transition-colors">
+                            <span class="i18n" data-key="close">Cerrar</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Traducciones
+        const translations = {
+            es: {
+                backToHome: "Volver al Inicio",
+                addNewBot: "Añadir Nuevo Bot",
+                basicConfig: "Configuración Básica",
+                exchange: "Exchange",
+                selectExchange: "Selecciona un exchange",
+                tradingPair: "Par de Trading",
+                viewPairs: "Ver Pares",
+                timeframe: "Timeframe",
+                marketType: "Tipo de Mercado",
+                spot: "Spot",
+                futures: "Futuros",
+                investmentAmount: "Monto a Invertir",
+                strategyConfig: "Configuración de Estrategia",
+                strategyType: "Tipo de Estrategia",
+                predefinedStrategy: "Estrategia Predefinida",
+                customStrategy: "Estrategia Personalizada",
+                selectCustomStrategy: "Selecciona una estrategia personalizada",
+                createNewCustomStrategy: "Crear nueva estrategia personalizada",
+                addBot: "Añadir Bot",
+                cancel: "Cancelar",
+                availablePairs: "Pares Disponibles",
+                loadingPairs: "Cargando pares...",
+                close: "Cerrar",
+                noPairsFound: "No se encontraron pares",
+                errorLoadingPairs: "Error al cargar pares"
+            },
+            en: {
+                backToHome: "Back to Home",
+                addNewBot: "Add New Bot",
+                basicConfig: "Basic Configuration",
+                exchange: "Exchange",
+                selectExchange: "Select an exchange",
+                tradingPair: "Trading Pair",
+                viewPairs: "View Pairs",
+                timeframe: "Timeframe",
+                marketType: "Market Type",
+                spot: "Spot",
+                futures: "Futures",
+                investmentAmount: "Investment Amount",
+                strategyConfig: "Strategy Configuration",
+                strategyType: "Strategy Type",
+                predefinedStrategy: "Predefined Strategy",
+                customStrategy: "Custom Strategy",
+                selectCustomStrategy: "Select a custom strategy",
+                createNewCustomStrategy: "Create new custom strategy",
+                addBot: "Add Bot",
+                cancel: "Cancel",
+                availablePairs: "Available Pairs",
+                loadingPairs: "Loading pairs...",
+                close: "Close",
+                noPairsFound: "No pairs found",
+                errorLoadingPairs: "Error loading pairs"
+            },
+            pt: {
+                backToHome: "Voltar ao Início",
+                addNewBot: "Adicionar Novo Bot",
+                basicConfig: "Configuração Básica",
+                exchange: "Exchange",
+                selectExchange: "Selecione um exchange",
+                tradingPair: "Par de Trading",
+                viewPairs: "Ver Pares",
+                timeframe: "Timeframe",
+                marketType: "Tipo de Mercado",
+                spot: "Spot",
+                futures: "Futuros",
+                investmentAmount: "Montante a Investir",
+                strategyConfig: "Configuração de Estratégia",
+                strategyType: "Tipo de Estratégia",
+                predefinedStrategy: "Estratégia Predefinida",
+                customStrategy: "Estratégia Personalizada",
+                selectCustomStrategy: "Selecione uma estratégia personalizada",
+                createNewCustomStrategy: "Criar nova estratégia personalizada",
+                addBot: "Adicionar Bot",
+                cancel: "Cancelar",
+                availablePairs: "Pares Disponíveis",
+                loadingPairs: "Carregando pares...",
+                close: "Fechar",
+                noPairsFound: "Nenhum par encontrado",
+                errorLoadingPairs: "Erro ao carregar pares"
+            }
+        };
+
+        // Inicializar idioma
+        let currentLang = localStorage.getItem('botxi-language') || 'es';
+
+        // Función para aplicar idioma
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('botxi-language', lang);
+            document.documentElement.setAttribute('lang', lang);
+
+            // Actualizar todos los elementos traducibles
+            document.querySelectorAll('.i18n').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (key && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+
+            // Actualizar placeholders
+            document.getElementById('search-pairs').placeholder =
+                lang === 'es' ? 'Buscar par...' :
+                lang === 'en' ? 'Search pair...' :
+                'Buscar par...';
+        }
+
+        // Aplicar idioma al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            setLanguage(currentLang);
+
+            // Configurar toastr
+            toastr.options = {
+                "closeButton": true,
+                "positionClass": "toast-top-right",
+                "progressBar": true,
+                "timeOut": "5000"
+            };
+        });
+
+        // Función para alternar entre estrategias predefinidas y personalizadas
+        function toggleStrategyOptions() {
+            const strategyType = document.querySelector('input[name="strategy_type"]:checked').value;
+            const predefinedOptions = document.getElementById('predefined-options');
+            const customOptions = document.getElementById('custom-options');
+
+            if (strategyType === 'predefined') {
+                predefinedOptions.classList.remove('hidden');
+                customOptions.classList.add('hidden');
+            } else {
+                predefinedOptions.classList.add('hidden');
+                customOptions.classList.remove('hidden');
+            }
+        }
+
+        // Función para cargar pares de trading
+        function loadPairs() {
+            const exchangeSelect = document.getElementById('exchange');
+            const exchangeId = exchangeSelect.value;
+
+            if (!exchangeId) {
+                toastr.warning(currentLang === 'es' ? 'Selecciona un exchange primero' :
+                              currentLang === 'en' ? 'Select an exchange first' :
+                              'Selecione um exchange primeiro');
+                return;
+            }
+
+            // Mostrar modal
+            document.getElementById('pairs-modal').classList.remove('hidden');
+
+            // Cargar pares
+            fetch(`/api/exchange_pairs/${exchangeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayPairs(data.pairs);
+                    } else {
+                        document.getElementById('pairs-list').innerHTML =
+                            `<li class="text-center text-red-400 py-4">${translations[currentLang].errorLoadingPairs}: ${data.message}</li>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('pairs-list').innerHTML =
+                        `<li class="text-center text-red-400 py-4">${translations[currentLang].errorLoadingPairs}</li>`;
+                });
+        }
+
+        // Función para mostrar pares
+        function displayPairs(pairs) {
+            const pairsList = document.getElementById('pairs-list');
+
+            if (!pairs || pairs.length === 0) {
+                pairsList.innerHTML = `<li class="text-center text-gray-400 py-4">${translations[currentLang].noPairsFound}</li>`;
+                return;
+            }
+
+            let html = '';
+
+            pairs.forEach(pair => {
+                html += `
+                    <li class="pair-item">
+                        <button type="button" onclick="selectPair('${pair}')"
+                                class="w-full text-left px-3 py-2 rounded-md hover:bg-slate-700 transition-colors">
+                            ${pair}
+                        </button>
+                    </li>
+                `;
+            });
+
+            pairsList.innerHTML = html;
+
+            // Configurar búsqueda
+            document.getElementById('search-pairs').addEventListener('input', filterPairs);
+        }
+
+// Función para filtrar pares
+        function filterPairs() {
+            const searchText = document.getElementById('search-pairs').value.toLowerCase();
+            const pairItems = document.querySelectorAll('.pair-item');
+
+            pairItems.forEach(item => {
+                const pairText = item.textContent.trim().toLowerCase();
+                if (pairText.includes(searchText)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Función para seleccionar un par
+        function selectPair(pair) {
+            document.getElementById('symbol').value = pair;
+            closeModal();
+        }
+
+        // Función para cerrar el modal
+        function closeModal() {
+            document.getElementById('pairs-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>BOTXI - Crear Estrategia Personalizada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <!-- Misma configuración de estilos que en trading_bots.html -->
+    <style>
+        /* Agregar estilos para CodeMirror */
+        .CodeMirror {
+            height: 500px;
+            border-radius: 0.75rem;
+            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-100 font-sans transition-colors duration-300" id="app-body">
+    <!-- Misma barra de navegación que en los otros archivos -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="{{ url_for('index') }}" class="flex items-center space-x-3">
+                    <div class="text-2xl font-bold bg-clip-text text-transparent gradient-bg">BOTXI</div>
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded-full animate-pulse-slow">Beta</span>
+                </a>
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('index') }}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <span class="i18n" data-key="backToHome">Volver al Inicio</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-4 max-w-6xl">
+        <div class="mb-8 flex items-center">
+            <div class="w-4 h-8 bg-gradient-to-b from-purple-600 to-pink-600 rounded-md mr-3"></div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent gradient-bg">
+                <span class="i18n" data-key="createCustomStrategy">Crear Estrategia Personalizada</span>
+            </h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="mb-6">
+              {% for category, message in messages %}
+                <li class="p-4 mb-4 text-sm rounded-xl
+                           {% if category == 'error' %}
+                              bg-red-900/30 text-red-200 border border-red-700
+                           {% else %}
+                              bg-green-900/30 text-green-200 border border-green-700
+                           {% endif %}
+                           animate-fade-in">
+                  {{ message }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Instrucciones para crear estrategias -->
+        <div class="mb-8 bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-slate-700 p-5">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="instructions">Instrucciones</span>
+            </h2>
+
+            <div class="text-gray-300 space-y-3">
+                <p class="i18n" data-key="instructionsText1">
+                    Crea tu propia estrategia de trading definiendo una función que analice los datos y genere señales. La función debe llamarse <code class="bg-slate-700 px-2 py-1 rounded">custom_strategy</code> y recibir dos parámetros:
+                </p>
+                <ul class="list-disc pl-6 space-y-2">
+                    <li><code class="bg-slate-700 px-2 py-1 rounded">df</code> - Un DataFrame de Pandas con datos OHLCV e indicadores ya calculados</li>
+                    <li><code class="bg-slate-700 px-2 py-1 rounded">bot</code> - Una referencia a la instancia del bot que ejecuta la estrategia</li>
+                </ul>
+                <p class="i18n" data-key="instructionsText2">
+                    Tu función debe devolver una señal de trading en formato diccionario o None. Por ejemplo:
+                </p>
+                <pre class="bg-slate-700 p-3 rounded-lg text-sm overflow-x-auto">
+# Para operación de compra
+{"action": "buy", "price": df.iloc[-1]['close'], "atr": df.iloc[-1]['atr']}
+
+# Para operación de venta
+{"action": "sell", "price": df.iloc[-1]['close'], "atr": df.iloc[-1]['atr']}
+
+# Para cerrar posición
+{"action": "close", "reason": "mi señal personalizada"}
+
+# Sin señal
+None
+                </pre>
+                <p class="i18n" data-key="instructionsText3">
+                    Los indicadores ya calculados en el DataFrame incluyen:
+                </p>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>EMA rápida y lenta: <code>df['ema_fast']</code>, <code>df['ema_slow']</code></li>
+                    <li>RSI: <code>df['rsi']</code></li>
+                    <li>MACD: <code>df['macd']</code>, <code>df['macd_signal']</code>, <code>df['macd_hist']</code></li>
+                    <li>Bandas de Bollinger: <code>df['ma']</code>, <code>df['bb_upper']</code>, <code>df['bb_lower']</code></li>
+                    <li>ATR: <code>df['atr']</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Formulario para crear estrategia -->
+        <form method="post" class="mb-8 space-y-6">
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-300 i18n" data-key="strategyName">Nombre de la Estrategia:</label>
+                    <input type="text" id="name" name="name" required
+                           class="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                           value="{{ name if name else '' }}">
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-300 i18n" data-key="strategyDescription">Descripción:</label>
+                    <textarea id="description" name="description" rows="2"
+                              class="mt-1 block w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">{{ description if description else '' }}</textarea>
+                </div>
+
+                <div>
+                    <label for="code-editor" class="block text-sm font-medium text-gray-300 i18n" data-key="strategyCode">Código de la Estrategia:</label>
+                    <div class="mt-1">
+                        <textarea id="code-editor" name="code">{{ code if code else example_code }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="i18n" data-key="saveStrategy">Guardar Estrategia</span>
+                </button>
+
+                <a href="{{ url_for('index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors">
+                    <span class="i18n" data-key="cancel">Cancelar</span>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Ejemplo de código predeterminado
+        const defaultCode = `def custom_strategy(df, bot):
+    """
+    Estrategia personalizada de trading
+
+    Parámetros:
+    df - DataFrame con datos OHLCV e indicadores
+    bot - Instancia del bot que ejecuta la estrategia
+
+    Retorna:
+    dict o None - Señal de trading o None si no hay señal
+    """
+# Obtener las últimas filas para análisis
+    if len(df) < 2:
+        return None
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    # Verificar si el bot ya tiene una posición abierta
+    if bot.current_position:
+        # Lógica para cerrar posición
+        if bot.current_position['side'] == 'long':
+            # Cerrar largo si precio cruza por debajo de la EMA lenta
+            if last['close'] < last['ema_slow'] and prev['close'] >= prev['ema_slow']:
+                return {"action": "close", "reason": "precio por debajo de EMA lenta"}
+        else:
+            # Cerrar corto si precio cruza por encima de la EMA lenta
+            if last['close'] > last['ema_slow'] and prev['close'] <= prev['ema_slow']:
+                return {"action": "close", "reason": "precio por encima de EMA lenta"}
+    else:
+        # Lógica para abrir posición
+
+        # Señal de compra: RSI saliendo de sobreventa y precio cruzando por encima de la EMA rápida
+        if prev['rsi'] < 30 and last['rsi'] > 30 and last['close'] > last['ema_fast'] and prev['close'] <= prev['ema_fast']:
+            return {"action": "buy", "price": last['close'], "atr": last['atr']}
+
+        # Señal de venta (solo para futuros): RSI saliendo de sobrecompra y precio cruzando por debajo de la EMA rápida
+        if bot.market_type == "future":
+            if prev['rsi'] > 70 and last['rsi'] < 70 and last['close'] < last['ema_fast'] and prev['close'] >= prev['ema_fast']:
+                return {"action": "sell", "price": last['close'], "atr": last['atr']}
+
+    # Sin señal
+    return None
+`;
+
+        // Inicializar CodeMirror
+        document.addEventListener('DOMContentLoaded', function() {
+            // Si no hay código predefinido, usar el ejemplo
+            const editorElement = document.getElementById('code-editor');
+            if (!editorElement.value.trim()) {
+                editorElement.value = defaultCode;
+            }
+
+            const editor = CodeMirror.fromTextArea(editorElement, {
+                mode: "python",
+                theme: "dracula",
+                lineNumbers: true,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: false,
+                autoCloseBrackets: true,
+                matchBrackets: true
+            });
+
+            // Actualizar campo oculto al enviar el formulario
+            document.querySelector('form').addEventListener('submit', function() {
+                editor.save();
+            });
+        });
+    </script>
+</body>
+</html>

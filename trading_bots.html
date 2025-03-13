@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>BOTXI - Gestor de Bots de Trading</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            "50": "#f0faff",
+                            "100": "#e0f2fe",
+                            "200": "#bae6fd",
+                            "300": "#7dd3fc",
+                            "400": "#38bdf8",
+                            "500": "#0ea5e9",
+                            "600": "#0284c7",
+                            "700": "#0369a1",
+                            "800": "#075985",
+                            "900": "#0c4a6e",
+                            "950": "#082f49"
+                        },
+                        blueEye: {
+                            "50": "#f0f9ff",
+                            "100": "#e0f7ff",
+                            "200": "#c0e8ff",
+                            "300": "#99d5ff",
+                            "400": "#5aafff",
+                            "500": "#3b82f6",
+                            "600": "#1d4ed8",
+                            "700": "#1e40af",
+                            "800": "#1e3a8a",
+                            "900": "#172554"
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'ui-sans-serif', 'system-ui', '-apple-system',
+                                'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue',
+                                'Arial', 'Noto Sans', 'sans-serif', 'Apple Color Emoji',
+                                'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #7038ff, #00a3ff, #3b82f6, #5f8fff);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .light-gradient-bg {
+            background: linear-gradient(-45deg, #e0f2fe, #93c5fd, #bfdbfe, #60a5fa);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .blue-gradient-bg {
+            background: linear-gradient(-45deg, #1e3a8a, #1d4ed8, #3b82f6, #60a5fa);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        /* Temas */
+        .theme-dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --accent-color: #3b82f6;
+        }
+
+        .theme-blue-eye {
+            --bg-primary: #15263a;
+            --bg-secondary: #1a365d;
+            --text-primary: #e0f2fe;
+            --text-secondary: #bae6fd;
+            --accent-color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-100 font-sans transition-colors duration-300" id="app-body">
+    <!-- Barra de navegación con selección de idioma y tema -->
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="text-2xl font-bold bg-clip-text text-transparent gradient-bg">BOTXI</div>
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded-full animate-pulse-slow">Beta</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Selector de idioma -->
+                    <div class="relative" id="language-selector">
+                        <button class="flex items-center space-x-1 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg px-3 py-2 transition-colors" id="language-button">
+                            <span class="language-text">🇪🇸 Español</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div class="absolute right-0 mt-2 bg-slate-800 rounded-lg shadow-lg p-2 hidden w-36 z-10" id="language-dropdown">
+                            <button data-lang="es" class="language-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">🇪🇸 Español</button>
+                            <button data-lang="en" class="language-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">🇺🇸 English</button>
+                            <button data-lang="pt" class="language-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">🇧🇷 Português</button>
+                        </div>
+                    </div>
+
+                    <!-- Selector de tema -->
+                    <div class="relative" id="theme-selector">
+                        <button class="flex items-center space-x-1 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg px-3 py-2 transition-colors" id="theme-button">
+                            <span class="theme-text">🌑 Oscuro</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div class="absolute right-0 mt-2 bg-slate-800 rounded-lg shadow-lg p-2 hidden w-36 z-10" id="theme-dropdown">
+                            <button data-theme="dark" class="theme-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">🌑 <span class="theme-name">Oscuro</span></button>
+                            <button data-theme="light" class="theme-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">☀️ <span class="theme-name">Claro</span></button>
+                            <button data-theme="blue-eye" class="theme-option block w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-sm">👁️ <span class="theme-name">Azul</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-4 max-w-6xl">
+        <h1 class="text-4xl font-bold text-center mb-8 bg-clip-text text-transparent gradient-bg">
+            <span class="i18n" data-key="title">Gestor de Bots de Trading</span>
+        </h1>
+
+        <!-- Botones de acción principales -->
+        <div class="flex flex-wrap justify-center gap-4 mb-8">
+            <a href="{{ url_for('add_bot') }}"
+               class="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700
+                      text-white font-bold py-3 px-6 rounded-xl
+                      transition-all duration-300 ease-in-out transform hover:scale-105
+                      flex items-center space-x-2 shadow-lg shadow-blue-600/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="addBot">Añadir Bot</span>
+            </a>
+
+            <a href="{{ url_for('add_exchanges') }}"
+               class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700
+                      text-white font-bold py-3 px-6 rounded-xl
+                      transition-all duration-300 ease-in-out transform hover:scale-105
+                      flex items-center space-x-2 shadow-lg shadow-green-600/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="addExchange">Añadir Exchange</span>
+            </a>
+
+            <a href="{{ url_for('register_custom_strategy') }}"
+               class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700
+                      text-white font-bold py-3 px-6 rounded-xl
+                      transition-all duration-300 ease-in-out transform hover:scale-105
+                      flex items-center space-x-2 shadow-lg shadow-purple-600/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="addCustomStrategy">Crear Estrategia</span>
+            </a>
+
+            <a href="{{ url_for('export_all_history') }}"
+               class="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700
+                      text-white font-bold py-3 px-6 rounded-xl
+                      transition-all duration-300 ease-in-out transform hover:scale-105
+                      flex items-center space-x-2 shadow-lg shadow-amber-600/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="exportAllHistory">Exportar Historial</span>
+            </a>
+        </div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="mb-6">
+              {% for category, message in messages %}
+                <li class="p-4 mb-4 text-sm rounded-xl
+                           {% if category == 'error' %}
+                              bg-red-900/30 text-red-200 border border-red-700
+                           {% else %}
+                              bg-green-900/30 text-green-200 border border-green-700
+                           {% endif %}
+                           animate-fade-in">
+                  {{ message }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Panel de Exchanges -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="exchangesTitle">Exchanges Configurados</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for exchange_id, exchange_config in exchanges.items() %}
+                <div id="exchange-{{ exchange_id }}" class="bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden animate-slide-up border border-slate-700 hover:border-slate-600 transition-colors"
+                     style="animation-delay: {{ loop.index0 * 100 }}ms;">
+                    <!-- Cabecera del Exchange -->
+                    <div class="gradient-bg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold">{{ exchange_id | upper }}</h3>
+                            <span class="status inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <span class="h-2 w-2 mr-1 rounded-full bg-green-600"></span>
+                                <span class="i18n" data-key="configured">Configurado</span>
+                            </span>
+                        </div>
+                        <p class="text-white/80 text-sm">API: {{ exchange_config.apiKey[:5] }}...</p>
+                    </div>
+
+                    <!-- Información del Exchange -->
+                    <div class="p-5">
+                        <div class="flex flex-col space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400 text-sm i18n" data-key="bots">Bots:</span>
+                                <span class="bg-slate-700 px-2 py-1 rounded-lg text-sm exchange-bot-count">
+                                    <!-- Se actualizará vía JavaScript -->
+                                    0
+                                </span>
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400 text-sm i18n" data-key="activeStrategy">Estrategias activas:</span>
+                                <span class="bg-slate-700 px-2 py-1 rounded-lg text-sm exchange-strategy-count">
+                                    <!-- Se actualizará vía JavaScript -->
+                                    0
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="flex justify-between mt-6">
+                            <form action="{{ url_for('remove_exchange', exchange_name=exchange_id) }}" method="post"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este exchange?');">
+                                <button type="submit"
+                                        class="flex justify-center items-center bg-red-600/20 text-red-400 hover:bg-red-600/30 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="i18n" data-key="delete">Eliminar</span>
+                                </button>
+                            </form>
+
+                            <a href="{{ url_for('add_bot') }}?exchange={{ exchange_id }}"
+                               class="flex justify-center items-center bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="i18n" data-key="addBotToExchange">Añadir Bot</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Tarjeta de "Agregar Nuevo Exchange" -->
+                <div class="bg-slate-800/30 backdrop-blur-sm border-2 border-dashed border-slate-700 rounded-xl shadow-lg overflow-hidden animate-slide-up flex items-center justify-center p-6 hover:border-slate-600 transition-colors">
+                    <a href="{{ url_for('add_exchanges') }}" class="flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span class="text-lg font-medium i18n" data-key="addNewExchange">Agregar Nuevo Exchange</span>
+                        <span class="text-sm text-slate-600 mt-1 i18n" data-key="connectExchangeAccount">Conectar cuenta de exchange</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Bots de Trading -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="botsTitle">Bots de Trading</span>
+                <span class="ml-3 px-2 py-1 bg-blue-900/30 rounded-lg text-xs text-blue-300 font-medium i18n" data-key="liveData">Datos en tiempo real</span>
+            </h2>
+
+            <div id="bots-container" class="overflow-x-auto bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg border border-slate-700">
+                <table class="min-w-full divide-y divide-slate-700">
+                    <thead class="bg-slate-700/50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="id">ID</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="exchange">Exchange</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="symbol">Símbolo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="strategy">Estrategia</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="marketType">Tipo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="status">Estado</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="pnl">P&L</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="lastUpdate">Última Actualización</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider i18n" data-key="actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50 bg-slate-800/20" id="bots-table-body">
+                        {% for bot_id, bot in bots.items() %}
+                        <tr id="bot-row-{{ bot_id }}" class="hover:bg-slate-700/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">{{ bot_id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">{{ bot.exchange }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">{{ bot.symbol }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">{{ bot.strategy }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">{{ bot.market_type }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if bot.is_running %}
+                                        bg-green-100 text-green-800
+                                    {% else %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% endif %}">
+                                    <span class="h-2 w-2 mr-1 rounded-full
+                                    {% if bot.is_running %}
+                                        bg-green-600
+                                    {% else %}
+                                        bg-yellow-600
+                                    {% endif %}"></span>
+                                    {{ bot.status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm
+                                {% if bot.profit_loss.startswith('-') %}
+                                    text-red-400
+                                {% else %}
+                                    text-green-400
+                                {% endif %}">
+                                {{ bot.profit_loss }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ bot.last_update }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex">
+                                <a href="{{ url_for('view_bot', bot_id=bot_id) }}"
+                                   class="text-indigo-400 hover:text-indigo-300 bg-indigo-900/20 hover:bg-indigo-900/30 px-2 py-1 rounded transition-colors">
+                                    <span class="i18n" data-key="view">Ver</span>
+                                </a>
+
+                                {% if bot.is_running %}
+                                <form action="{{ url_for('stop_bot', bot_id=bot_id) }}" method="post" class="inline">
+                                    <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="stop">Detener</span>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('start_bot', bot_id=bot_id) }}" method="post" class="inline">
+                                    <button type="submit" class="text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="start">Iniciar</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <form action="{{ url_for('remove_bot', bot_id=bot_id) }}" method="post" class="inline"
+                                      onsubmit="return confirm('¿Estás seguro de eliminar este bot?');">
+                                    <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="delete">Eliminar</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Panel para Estrategias Personalizadas -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span class="i18n" data-key="customStrategiesTitle">Estrategias Personalizadas</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for strategy_name, description in custom_strategies.items() %}
+                <div class="bg-slate-800/60 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden animate-slide-up border border-slate-700 hover:border-slate-600 transition-colors p-5">
+                    <h3 class="text-lg font-bold mb-2 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        {{ strategy_name }}
+                    </h3>
+                    <p class="text-gray-400 mb-4">{{ description }}</p>
+                    <div class="flex justify-between">
+                        <a href="{{ url_for('add_bot') }}?custom_strategy={{ strategy_name }}"
+                           class="text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-3 py-2 rounded-lg transition-colors text-sm flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="i18n" data-key="createBotWithStrategy">Crear Bot</span>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Tarjeta de "Crear Nueva Estrategia" -->
+                <div class="bg-slate-800/30 backdrop-blur-sm border-2 border-dashed border-slate-700 rounded-xl shadow-lg overflow-hidden animate-slide-up flex items-center justify-center p-6 hover:border-slate-600 transition-colors">
+                    <a href="{{ url_for('register_custom_strategy') }}" class="flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span class="text-lg font-medium i18n" data-key="createNewStrategy">Crear Nueva Estrategia</span>
+                        <span class="text-sm text-slate-600 mt-1 i18n" data-key="customizeTrading">Personaliza tu trading</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Traducciones
+        const translations = {
+            es: {
+                title: "Gestor de Bots de Trading",
+                addBot: "Añadir Bot",
+                addExchange: "Añadir Exchange",
+                addCustomStrategy: "Crear Estrategia",
+                exportAllHistory: "Exportar Historial",
+                exchangesTitle: "Exchanges Configurados",
+                configured: "Configurado",
+                bots: "Bots",
+                activeStrategy: "Estrategias activas",
+                delete: "Eliminar",
+                addBotToExchange: "Añadir Bot",
+                addNewExchange: "Agregar Nuevo Exchange",
+                connectExchangeAccount: "Conectar cuenta de exchange",
+                botsTitle: "Bots de Trading",
+                liveData: "Datos en tiempo real",
+                id: "ID",
+                exchange: "Exchange",
+                symbol: "Símbolo",
+                strategy: "Estrategia",
+                marketType: "Tipo",
+                status: "Estado",
+                pnl: "P&L",
+                lastUpdate: "Última Actualización",
+                actions: "Acciones",
+                view: "Ver",
+                start: "Iniciar",
+                stop: "Detener",
+                customStrategiesTitle: "Estrategias Personalizadas",
+                createBotWithStrategy: "Crear Bot",
+                createNewStrategy: "Crear Nueva Estrategia",
+                customizeTrading: "Personaliza tu trading"
+            },
+            en: {
+                title: "Trading Bots Manager",
+                addBot: "Add Bot",
+                addExchange: "Add Exchange",
+                addCustomStrategy: "Create Strategy",
+                exportAllHistory: "Export History",
+                exchangesTitle: "Configured Exchanges",
+                configured: "Configured",
+                bots: "Bots",
+                activeStrategy: "Active strategies",
+                delete: "Delete",
+                addBotToExchange: "Add Bot",
+                addNewExchange: "Add New Exchange",
+                connectExchangeAccount: "Connect exchange account",
+                botsTitle: "Trading Bots",
+                liveData: "Live data",
+                id: "ID",
+                exchange: "Exchange",
+                symbol: "Symbol",
+                strategy: "Strategy",
+                marketType: "Type",
+                status: "Status",
+                pnl: "P&L",
+                lastUpdate: "Last Update",
+                actions: "Actions",
+                view: "View",
+                start: "Start",
+                stop: "Stop",
+                customStrategiesTitle: "Custom Strategies",
+                createBotWithStrategy: "Create Bot",
+                createNewStrategy: "Create New Strategy",
+                customizeTrading: "Customize your trading"
+            },
+            pt: {
+                title: "Gerenciador de Bots de Trading",
+                addBot: "Adicionar Bot",
+                addExchange: "Adicionar Exchange",
+                addCustomStrategy: "Criar Estratégia",
+                exportAllHistory: "Exportar Histórico",
+                exchangesTitle: "Exchanges Configurados",
+                configured: "Configurado",
+                bots: "Bots",
+                activeStrategy: "Estratégias ativas",
+                delete: "Excluir",
+                addBotToExchange: "Adicionar Bot",
+                addNewExchange: "Adicionar Novo Exchange",
+                connectExchangeAccount: "Conectar conta de exchange",
+                botsTitle: "Bots de Trading",
+                liveData: "Dados em tempo real",
+                id: "ID",
+                exchange: "Exchange",
+                symbol: "Símbolo",
+                strategy: "Estratégia",
+                marketType: "Tipo",
+                status: "Estado",
+                pnl: "P&L",
+                lastUpdate: "Última Atualização",
+                actions: "Ações",
+                view: "Ver",
+                start: "Iniciar",
+                stop: "Parar",
+                customStrategiesTitle: "Estratégias Personalizadas",
+                createBotWithStrategy: "Criar Bot",
+                createNewStrategy: "Criar Nova Estratégia",
+                customizeTrading: "Personalize seu trading"
+            }
+        };
+
+        // Nombres de temas por idioma
+        const themeNames = {
+            es: {
+                dark: "Oscuro",
+                light: "Claro",
+                "blue-eye": "Azul"
+            },
+            en: {
+                dark: "Dark",
+                light: "Light",
+                "blue-eye": "Blue Eye"
+            },
+            pt: {
+                dark: "Escuro",
+                light: "Claro",
+                "blue-eye": "Azul"
+            }
+        };
+
+        // Inicializar configuración
+        let currentLang = localStorage.getItem('botxi-language') || 'es';
+        let currentTheme = localStorage.getItem('botxi-theme') || 'dark';
+
+        // Funciones para manejar idiomas
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('botxi-language', lang);
+            document.documentElement.setAttribute('lang', lang);
+
+            // Actualizar todos los elementos traducibles
+            document.querySelectorAll('.i18n').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (key && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+
+            // Actualizar texto del botón de idioma
+            const langButton = document.getElementById('language-button');
+            const langEmoji = lang === 'es' ? '🇪🇸' : lang === 'en' ? '🇺🇸' : '🇧🇷';
+            const langName = lang === 'es' ? 'Español' : lang === 'en' ? 'English' : 'Português';
+            langButton.querySelector('.language-text').textContent = `${langEmoji} ${langName}`;
+
+            // Actualizar nombres de temas en el menú
+            document.querySelectorAll('.theme-name').forEach(el => {
+                const themeId = el.closest('.theme-option').getAttribute('data-theme');
+                el.textContent = themeNames[lang][themeId];
+            });
+
+            // Actualizar texto del botón de tema
+            const themeButton = document.getElementById('theme-button');
+            const themeEmoji = currentTheme === 'dark' ? '🌑' : currentTheme === 'light' ? '☀️' : '👁️';
+            const themeName = themeNames[lang][currentTheme];
+            themeButton.querySelector('.theme-text').textContent = `${themeEmoji} ${themeName}`;
+        }
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            localStorage.setItem('botxi-theme', theme);
+
+            const body = document.getElementById('app-body');
+            document.documentElement.className = theme;
+
+            // Aplicar clases específicas según el tema
+            if (theme === 'dark') {
+                body.className = 'bg-slate-900 text-gray-100 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 shadow-md mb-6';
+            } else if (theme === 'light') {
+                body.className = 'bg-white text-slate-900 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-slate-300 shadow-md mb-6 text-slate-900';
+            } else if (theme === 'blue-eye') {
+                body.className = 'bg-blueEye-900 text-blueEye-100 font-sans transition-colors duration-300';
+                document.querySelector('nav').className = 'sticky top-0 z-50 backdrop-blur-md bg-blueEye-900/80 border-b border-blueEye-800 shadow-md mb-6';
+            }
+
+            // Actualizar texto del botón de tema
+            const themeButton = document.getElementById('theme-button');
+            const themeEmoji = theme === 'dark' ? '🌑' : theme === 'light' ? '☀️' : '👁️';
+            const themeName = themeNames[currentLang][theme];
+            themeButton.querySelector('.theme-text').textContent = `${themeEmoji} ${themeName}`;
+        }
+
+        // Inicializar UI
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar idioma y tema
+            setLanguage(currentLang);
+            setTheme(currentTheme);
+        // Configurar eventos para el selector de idioma
+            const langButton = document.getElementById('language-button');
+            const langDropdown = document.getElementById('language-dropdown');
+
+            langButton.addEventListener('click', function() {
+                langDropdown.classList.toggle('hidden');
+            });
+
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    setLanguage(lang);
+                    langDropdown.classList.add('hidden');
+                });
+            });
+
+            // Configurar eventos para el selector de tema
+            const themeButton = document.getElementById('theme-button');
+            const themeDropdown = document.getElementById('theme-dropdown');
+
+            themeButton.addEventListener('click', function() {
+                themeDropdown.classList.toggle('hidden');
+            });
+
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const theme = this.getAttribute('data-theme');
+                    setTheme(theme);
+                    themeDropdown.classList.add('hidden');
+                });
+            });
+
+            // Cerrar dropdowns al hacer clic fuera
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('#language-selector')) {
+                    langDropdown.classList.add('hidden');
+                }
+                if (!event.target.closest('#theme-selector')) {
+                    themeDropdown.classList.add('hidden');
+                }
+            });
+
+            // Configurar toastr
+            toastr.options = {
+                "closeButton": true,
+                "positionClass": "toast-top-right",
+                "progressBar": true,
+                "timeOut": "5000"
+            };
+
+            // Conectar con Socket.IO para actualizaciones en tiempo real
+            const socket = io();
+
+            socket.on('connect', function() {
+                console.log('Conectado a WebSocket');
+                toastr.success('Conectado al servidor en tiempo real');
+            });
+
+            socket.on('bot_updates', function(data) {
+                updateBotsTable(data);
+                updateExchangeStats(data);
+            });
+
+            // Actualizar la tabla de bots con datos en tiempo real
+            function updateBotsTable(botsData) {
+                const tableBody = document.getElementById('bots-table-body');
+
+                // Para cada bot en el JSON
+                for (const [botId, botInfo] of Object.entries(botsData)) {
+                    // Buscar si ya existe una fila para este bot
+                    let row = document.getElementById(`bot-row-${botId}`);
+
+                    if (row) {
+                        // Actualizar fila existente
+                        row.cells[5].innerHTML = `
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                ${botInfo.is_running ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                <span class="h-2 w-2 mr-1 rounded-full
+                                ${botInfo.is_running ? 'bg-green-600' : 'bg-yellow-600'}"></span>
+                                ${botInfo.status}
+                            </span>
+                        `;
+
+                        // Actualizar P&L
+                        const pnlCell = row.cells[6];
+                        pnlCell.textContent = botInfo.profit_loss;
+                        pnlCell.className = `px-6 py-4 whitespace-nowrap text-sm ${botInfo.profit_loss.startsWith('-') ? 'text-red-400' : 'text-green-400'}`;
+
+                        // Actualizar hora de actualización
+                        row.cells[7].textContent = botInfo.last_update;
+
+                        // Actualizar botones de acción
+                        const actionsCell = row.cells[8];
+                        let actionsHtml = `
+                            <a href="/bot/${botId}" class="text-indigo-400 hover:text-indigo-300 bg-indigo-900/20 hover:bg-indigo-900/30 px-2 py-1 rounded transition-colors">
+                                <span class="i18n" data-key="view">${translations[currentLang].view}</span>
+                            </a>
+                        `;
+
+                        if (botInfo.is_running) {
+                            actionsHtml += `
+                                <form action="/stop_bot/${botId}" method="post" class="inline">
+                                    <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="stop">${translations[currentLang].stop}</span>
+                                    </button>
+                                </form>
+                            `;
+                        } else {
+                            actionsHtml += `
+                                <form action="/start_bot/${botId}" method="post" class="inline">
+                                    <button type="submit" class="text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="start">${translations[currentLang].start}</span>
+                                    </button>
+                                </form>
+                            `;
+                        }
+
+                        actionsHtml += `
+                            <form action="/remove_bot/${botId}" method="post" class="inline"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este bot?');">
+                                <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                    <span class="i18n" data-key="delete">${translations[currentLang].delete}</span>
+                                </button>
+                            </form>
+                        `;
+
+                        actionsCell.innerHTML = actionsHtml;
+                    } else {
+                        // Crear nueva fila
+                        row = document.createElement('tr');
+                        row.id = `bot-row-${botId}`;
+                        row.className = "hover:bg-slate-700/30 transition-colors";
+
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${botId}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${botInfo.exchange}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${botInfo.symbol}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${botInfo.strategy}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${botInfo.market_type}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    ${botInfo.is_running ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                    <span class="h-2 w-2 mr-1 rounded-full
+                                    ${botInfo.is_running ? 'bg-green-600' : 'bg-yellow-600'}"></span>
+                                    ${botInfo.status}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm
+                                ${botInfo.profit_loss.startsWith('-') ? 'text-red-400' : 'text-green-400'}">
+                                ${botInfo.profit_loss}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">${botInfo.last_update}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex">
+                                <a href="/bot/${botId}" class="text-indigo-400 hover:text-indigo-300 bg-indigo-900/20 hover:bg-indigo-900/30 px-2 py-1 rounded transition-colors">
+                                    <span class="i18n" data-key="view">${translations[currentLang].view}</span>
+                                </a>
+
+                                ${botInfo.is_running
+                                    ? `<form action="/stop_bot/${botId}" method="post" class="inline">
+                                        <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                            <span class="i18n" data-key="stop">${translations[currentLang].stop}</span>
+                                        </button>
+                                       </form>`
+                                    : `<form action="/start_bot/${botId}" method="post" class="inline">
+                                        <button type="submit" class="text-green-400 hover:text-green-300 bg-green-900/20 hover:bg-green-900/30 px-2 py-1 rounded transition-colors">
+                                            <span class="i18n" data-key="start">${translations[currentLang].start}</span>
+                                        </button>
+                                       </form>`
+                                }
+
+                                <form action="/remove_bot/${botId}" method="post" class="inline"
+                                      onsubmit="return confirm('¿Estás seguro de eliminar este bot?');">
+                                    <button type="submit" class="text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-2 py-1 rounded transition-colors">
+                                        <span class="i18n" data-key="delete">${translations[currentLang].delete}</span>
+                                    </button>
+                                </form>
+                            </td>
+                        `;
+
+                        tableBody.appendChild(row);
+                    }
+                }
+
+                // Buscar y eliminar filas de bots que ya no existen
+                const allRows = tableBody.querySelectorAll('tr[id^="bot-row-"]');
+                allRows.forEach(row => {
+                    const rowBotId = row.id.replace('bot-row-', '');
+                    if (!botsData[rowBotId]) {
+                        row.remove();
+                    }
+                });
+            }
+
+            // Actualizar estadísticas de exchanges
+            function updateExchangeStats(botsData) {
+                // Crear un mapa de exchanges y sus bots/estrategias
+                const exchangeStats = {};
+
+                for (const [botId, botInfo] of Object.entries(botsData)) {
+                    const exchange = botInfo.exchange;
+
+                    if (!exchangeStats[exchange]) {
+                        exchangeStats[exchange] = {
+                            botCount: 0,
+                            strategies: new Set()
+                        };
+                    }
+
+                    exchangeStats[exchange].botCount++;
+                    exchangeStats[exchange].strategies.add(botInfo.strategy);
+                }
+
+                // Actualizar contadores en la UI
+                for (const [exchange, stats] of Object.entries(exchangeStats)) {
+                    const exchangeCard = document.getElementById(`exchange-${exchange}`);
+                    if (exchangeCard) {
+                        const botCountEl = exchangeCard.querySelector('.exchange-bot-count');
+                        const strategyCountEl = exchangeCard.querySelector('.exchange-strategy-count');
+
+                        if (botCountEl) {
+                            botCountEl.textContent = stats.botCount;
+                        }
+
+                        if (strategyCountEl) {
+                            strategyCountEl.textContent = stats.strategies.size;
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
